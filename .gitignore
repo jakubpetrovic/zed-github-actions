@@ -1,0 +1,18 @@
+# Rust build artifacts
+/target
+
+# Compiled extension output (built from source during publish)
+extension.wasm
+
+# Tree-sitter grammars downloaded by Zed at runtime
+/grammars
+
+# npm packages downloaded by the extension at runtime
+node_modules
+
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude
+CLAUDE.md
