@@ -12,7 +12,10 @@ GitHub Actions workflow support for [Zed](https://zed.dev), providing intelligen
 
 ## Installation
 
-Install via **Zed → Extensions** and search for "GitHub Actions".
+1. Build the extension using `make build` or `cargo build --target wasm32-wasip1 --release` 
+2. Open Zed Extensions menu
+3. Select `Install Dev Extension`
+4. Select this repository as teh extension directory
 
 The language server (`@actions/languageserver`) is downloaded automatically on first use via Zed's built-in Node.js. No manual install needed.
 

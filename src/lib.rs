@@ -11,18 +11,19 @@ use zed_extension_api::{self as zed, serde_json, settings::LspSettings, Result};
 
 const SERVER_NAME: &str = "gh-actions-language-server";
 const NPM_PACKAGE: &str = "@actions/languageserver";
-/// Must end with `NPM_BIN_NAME`.
-const NPM_BIN_PATH: &str = "node_modules/@actions/languageserver/bin/actions-languageserver";
 const NPM_BIN_NAME: &str = "actions-languageserver";
+/// Relative path to the language server entry point within the installed npm package.
+/// The filename component must match `NPM_BIN_NAME`.
+const NPM_BIN_PATH: &str = "node_modules/@actions/languageserver/bin/actions-languageserver";
 
 #[derive(Debug, Default)]
-struct GithubActionsExtension {
+struct GitHubActionsExtension {
     // Set to true once we've confirmed the language server is available for
     // this session, avoiding redundant npm version checks on every LSP restart.
     server_ready: bool,
 }
 
-impl GithubActionsExtension {
+impl GitHubActionsExtension {
     fn resolve_binary(
         &mut self,
         language_server_id: &zed::LanguageServerId,
@@ -37,7 +38,7 @@ impl GithubActionsExtension {
                 return Ok(zed::Command {
                     command: path,
                     args: binary.arguments.unwrap_or_else(|| vec!["--stdio".into()]),
-                    env: Default::default(),
+                    env: Vec::default(),
                 });
             }
         }
@@ -47,7 +48,7 @@ impl GithubActionsExtension {
             return Ok(zed::Command {
                 command: path,
                 args: vec!["--stdio".into()],
-                env: Default::default(),
+                env: Vec::default(),
             });
         }
 
@@ -67,7 +68,7 @@ impl GithubActionsExtension {
         Ok(zed::Command {
             command: node,
             args: vec![bin_path, "--stdio".into()],
-            env: Default::default(),
+            env: Vec::default(),
         })
     }
 
@@ -129,19 +130,23 @@ impl GithubActionsExtension {
 
 /// Pure token resolution logic, extracted for testability.
 ///
-/// Prefers `settings_token` over env vars; treats an empty settings token as absent.
+/// Priority order:
+/// 1. `settings_token` from Zed LSP settings (empty string treated as absent)
+/// 2. `GITHUB_TOKEN` environment variable
+/// 3. `GH_TOKEN` environment variable (set by `gh auth login`)
 fn resolve_token(settings_token: Option<&str>, env: &[(String, String)]) -> Option<String> {
     settings_token
         .filter(|t| !t.is_empty())
         .map(str::to_owned)
         .or_else(|| {
             env.iter()
-                .find(|(k, _)| k == "GITHUB_TOKEN" || k == "GH_TOKEN")
+                .find(|(k, _)| k == "GITHUB_TOKEN")
+                .or_else(|| env.iter().find(|(k, _)| k == "GH_TOKEN"))
                 .map(|(_, v)| v.clone())
         })
 }
 
-impl zed::Extension for GithubActionsExtension {
+impl zed::Extension for GitHubActionsExtension {
     fn new() -> Self {
         Self::default()
     }
@@ -188,7 +193,7 @@ impl zed::Extension for GithubActionsExtension {
     }
 }
 
-zed::register_extension!(GithubActionsExtension);
+zed::register_extension!(GitHubActionsExtension);
 
 #[cfg(test)]
 mod tests {
@@ -223,10 +228,16 @@ mod tests {
     }
 
     #[test]
-    fn github_token_takes_priority_over_gh_token() {
+    fn github_token_preferred_over_gh_token_regardless_of_order() {
+        // GITHUB_TOKEN must win even when GH_TOKEN appears first in the env
         let e = env(&[("GH_TOKEN", "gh"), ("GITHUB_TOKEN", "github")]);
-        // whichever comes first in the env slice wins via `find`
-        assert_eq!(resolve_token(None, &e).as_deref(), Some("gh"));
+        assert_eq!(resolve_token(None, &e).as_deref(), Some("github"));
+    }
+
+    #[test]
+    fn github_token_preferred_when_first() {
+        let e = env(&[("GITHUB_TOKEN", "github"), ("GH_TOKEN", "gh")]);
+        assert_eq!(resolve_token(None, &e).as_deref(), Some("github"));
     }
 
     #[test]
