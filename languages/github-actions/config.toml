@@ -1,6 +1,5 @@
 name = "GitHub Actions"
 grammar = "yaml"
-path_suffixes = ["yml", "yaml"]
 line_comments = ["# "]
 tab_size = 2
 hard_tabs = false
