@@ -29,8 +29,8 @@ Zed needs to know which files are GitHub Actions workflows. Add this to your Zed
 {
   "file_types": {
     "GitHub Actions": [
-      ".github/workflows/*.yml",
-      ".github/workflows/*.yaml"
+      "**/.github/workflows/*.yml",
+      "**/.github/workflows/*.yaml"
     ]
   }
 }
