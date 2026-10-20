@@ -37,21 +37,21 @@
   key: (flow_node
     (plain_scalar
       (string_scalar) @keyword))
-  (#match? @keyword "^(on|jobs|steps|uses|with|env|needs|if|run|name|runs-on|permissions|strategy|matrix|outputs|defaults|concurrency|secrets|inputs|shell|services|container|environment)$"))
+  (#match? @keyword "^(on|jobs|steps|uses|with|env|needs|if|run|name|runs-on|run-name|permissions|strategy|matrix|outputs|defaults|concurrency|secrets|inputs|shell|services|container|environment)$"))
 
 ; Event trigger keys
 (block_mapping_pair
   key: (flow_node
     (plain_scalar
       (string_scalar) @keyword.coroutine))
-  (#match? @keyword.coroutine "^(push|pull_request|pull_request_target|workflow_dispatch|workflow_call|workflow_run|schedule|release|deployment|create|delete|fork|issue_comment|issues|label|milestone|page_build|project|public|registry_package|repository_dispatch|status|watch|check_run|check_suite|deployment_status|discussion|discussion_comment|merge_group|pull_request_review|pull_request_review_comment|registry_package|status|watch)$"))
+  (#match? @keyword.coroutine "^(push|pull_request|pull_request_target|workflow_dispatch|workflow_call|workflow_run|schedule|release|deployment|create|delete|fork|issue_comment|issues|label|milestone|page_build|project|public|registry_package|repository_dispatch|status|watch|check_run|check_suite|deployment_status|discussion|discussion_comment|merge_group|pull_request_review|pull_request_review_comment|branch_protection_rule|gollum)$"))
 
 ; Action metadata keys
 (block_mapping_pair
   key: (flow_node
     (plain_scalar
       (string_scalar) @attribute))
-  (#match? @attribute "^(branches|branches-ignore|tags|tags-ignore|paths|paths-ignore|types|ref|repository|token|fail-fast|include|exclude|max-parallel|timeout-minutes|continue-on-error|working-directory|id|description|required|default|type|value|options|deprecationMessage)$"))
+  (#match? @attribute "^(branches|branches-ignore|tags|tags-ignore|paths|paths-ignore|types|ref|repository|token|fail-fast|include|exclude|max-parallel|timeout-minutes|cron|continue-on-error|working-directory|id|description|required|default|type|value|options|deprecationMessage)$"))
 
 ; Strings containing GitHub Actions expressions ${{ }} — mark the whole string
 ; so they stand out from plain static strings.
