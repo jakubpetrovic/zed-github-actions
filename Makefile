@@ -7,7 +7,8 @@ test:
 	cargo test
 
 check:
-	cargo clippy --target wasm32-wasip1 -- -D warnings
+	cargo fmt --check
+	cargo clippy --target wasm32-wasip1 --all-targets -- -D warnings
 
 clean:
 	cargo clean
