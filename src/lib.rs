@@ -29,26 +29,32 @@ impl GitHubActionsExtension {
         language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        // Priority 1: user-configured binary path in LSP settings
-        if let Some(binary) = LspSettings::for_worktree(SERVER_NAME, worktree)
+        let binary = LspSettings::for_worktree(SERVER_NAME, worktree)
             .ok()
-            .and_then(|s| s.binary)
-        {
-            if let Some(path) = binary.path {
-                return Ok(zed::Command {
-                    command: path,
-                    args: binary.arguments.unwrap_or_else(|| vec!["--stdio".into()]),
-                    env: Vec::default(),
-                });
-            }
+            .and_then(|s| s.binary);
+        let user_args = binary.as_ref().and_then(|b| b.arguments.clone());
+        let env: Vec<(String, String)> = binary
+            .as_ref()
+            .and_then(|b| b.env.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+
+        // Priority 1: user-configured binary path in LSP settings
+        if let Some(path) = binary.and_then(|b| b.path) {
+            return Ok(zed::Command {
+                command: path,
+                args: user_args.unwrap_or_else(|| vec!["--stdio".into()]),
+                env,
+            });
         }
 
         // Priority 2: binary already on PATH (e.g. installed globally via npm)
         if let Some(path) = worktree.which(NPM_BIN_NAME) {
             return Ok(zed::Command {
                 command: path,
-                args: vec!["--stdio".into()],
-                env: Vec::default(),
+                args: user_args.unwrap_or_else(|| vec!["--stdio".into()]),
+                env,
             });
         }
 
@@ -65,10 +71,13 @@ impl GitHubActionsExtension {
             .ok_or_else(|| "npm binary path contains non-UTF-8 characters".to_string())?
             .to_owned();
 
+        let mut args = vec![bin_path];
+        args.extend(user_args.unwrap_or_else(|| vec!["--stdio".into()]));
+
         Ok(zed::Command {
             command: node,
-            args: vec![bin_path, "--stdio".into()],
-            env: Vec::default(),
+            args,
+            env,
         })
     }
 
@@ -80,6 +89,17 @@ impl GitHubActionsExtension {
             return Ok(());
         }
 
+        if let Err(err) = self.install_server(language_server_id) {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::Failed(err.clone()),
+            );
+            return Err(err);
+        }
+        Ok(())
+    }
+
+    fn install_server(&mut self, language_server_id: &zed::LanguageServerId) -> Result<()> {
         zed::set_language_server_installation_status(
             language_server_id,
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
@@ -131,19 +151,27 @@ impl GitHubActionsExtension {
 /// Pure token resolution logic, extracted for testability.
 ///
 /// Priority order:
-/// 1. `settings_token` from Zed LSP settings (empty string treated as absent)
+/// 1. `settings_token` from Zed LSP settings
 /// 2. `GITHUB_TOKEN` environment variable
-/// 3. `GH_TOKEN` environment variable (set by `gh auth login`)
+/// 3. `GH_TOKEN` environment variable
+///
+/// Empty and whitespace-only values are treated as absent.
 fn resolve_token(settings_token: Option<&str>, env: &[(String, String)]) -> Option<String> {
     settings_token
-        .filter(|t| !t.is_empty())
-        .map(str::to_owned)
-        .or_else(|| {
-            env.iter()
-                .find(|(k, _)| k == "GITHUB_TOKEN")
-                .or_else(|| env.iter().find(|(k, _)| k == "GH_TOKEN"))
-                .map(|(_, v)| v.clone())
-        })
+        .and_then(non_empty)
+        .or_else(|| env_token(env, "GITHUB_TOKEN"))
+        .or_else(|| env_token(env, "GH_TOKEN"))
+}
+
+fn env_token(env: &[(String, String)], key: &str) -> Option<String> {
+    env.iter()
+        .find(|(k, _)| k == key)
+        .and_then(|(_, v)| non_empty(v))
+}
+
+fn non_empty(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_owned())
 }
 
 impl zed::Extension for GitHubActionsExtension {
@@ -200,13 +228,19 @@ mod tests {
     use super::*;
 
     fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     #[test]
     fn settings_token_takes_priority_over_env() {
         let e = env(&[("GITHUB_TOKEN", "env-token")]);
-        assert_eq!(resolve_token(Some("settings-token"), &e).as_deref(), Some("settings-token"));
+        assert_eq!(
+            resolve_token(Some("settings-token"), &e).as_deref(),
+            Some("settings-token")
+        );
     }
 
     #[test]
@@ -246,9 +280,20 @@ mod tests {
     }
 
     #[test]
-    fn whitespace_only_settings_token_is_not_filtered() {
-        // filter only removes empty strings, not whitespace — caller's responsibility
+    fn whitespace_only_settings_token_falls_back_to_env() {
         let e = env(&[("GITHUB_TOKEN", "env-token")]);
-        assert_eq!(resolve_token(Some("   "), &e).as_deref(), Some("   "));
+        assert_eq!(resolve_token(Some("   "), &e).as_deref(), Some("env-token"));
+    }
+
+    #[test]
+    fn empty_github_token_falls_back_to_gh_token() {
+        let e = env(&[("GITHUB_TOKEN", ""), ("GH_TOKEN", "gh")]);
+        assert_eq!(resolve_token(None, &e).as_deref(), Some("gh"));
+    }
+
+    #[test]
+    fn only_empty_env_tokens_return_none() {
+        let e = env(&[("GITHUB_TOKEN", ""), ("GH_TOKEN", " ")]);
+        assert_eq!(resolve_token(None, &e), None);
     }
 }
