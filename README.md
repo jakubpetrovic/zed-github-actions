@@ -39,7 +39,7 @@ Zed needs to know which files are GitHub Actions workflows. Add this to your Zed
 
 ### GitHub token (optional)
 
-A token enables completions that use live data from the GitHub API. Create a personal access token with the `repo` scope.
+A token enables completions that use live data from the GitHub API. Create a personal access token with read access to the repositories your workflows use.
 
 The extension looks for a token in this order:
 
@@ -47,7 +47,7 @@ The extension looks for a token in this order:
 2. `GITHUB_TOKEN` environment variable
 3. `GH_TOKEN` environment variable
 
-`gh auth login` does not set `GH_TOKEN`. It stores the token in the system keychain. To reuse it, export it in your shell profile: `export GH_TOKEN=$(gh auth token)`. Start Zed from a shell that has the variable set.
+`gh auth login` does not set `GH_TOKEN`. It stores the token in the system keychain. To reuse it, export it in your shell profile: `export GH_TOKEN=$(gh auth token)`. Zed only sees it when started from that shell (for example `zed .`). Launching from the Dock or Spotlight does not pass it. In that case, set `token` in Zed settings instead.
 
 ```json
 {
