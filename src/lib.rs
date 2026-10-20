@@ -32,7 +32,6 @@ impl GitHubActionsExtension {
         let binary = LspSettings::for_worktree(SERVER_NAME, worktree)
             .ok()
             .and_then(|s| s.binary);
-        let user_args = binary.as_ref().and_then(|b| b.arguments.clone());
         let env: Vec<(String, String)> = binary
             .as_ref()
             .and_then(|b| b.env.clone())
@@ -41,10 +40,12 @@ impl GitHubActionsExtension {
             .collect();
 
         // Priority 1: user-configured binary path in LSP settings
-        if let Some(path) = binary.and_then(|b| b.path) {
+        if let Some(path) = binary.as_ref().and_then(|b| b.path.clone()) {
             return Ok(zed::Command {
                 command: path,
-                args: user_args.unwrap_or_else(|| vec!["--stdio".into()]),
+                args: binary
+                    .and_then(|b| b.arguments)
+                    .unwrap_or_else(|| vec!["--stdio".into()]),
                 env,
             });
         }
@@ -53,7 +54,7 @@ impl GitHubActionsExtension {
         if let Some(path) = worktree.which(NPM_BIN_NAME) {
             return Ok(zed::Command {
                 command: path,
-                args: user_args.unwrap_or_else(|| vec!["--stdio".into()]),
+                args: vec!["--stdio".into()],
                 env,
             });
         }
@@ -71,12 +72,9 @@ impl GitHubActionsExtension {
             .ok_or_else(|| "npm binary path contains non-UTF-8 characters".to_string())?
             .to_owned();
 
-        let mut args = vec![bin_path];
-        args.extend(user_args.unwrap_or_else(|| vec!["--stdio".into()]));
-
         Ok(zed::Command {
             command: node,
-            args,
+            args: vec![bin_path, "--stdio".into()],
             env,
         })
     }
