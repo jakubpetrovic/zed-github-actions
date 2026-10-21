@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Highlight step `run:` scripts as bash and `actions/github-script` `script:` blocks as JavaScript.
+- Show top-level keys, jobs and named steps in the outline.
 - Apply user arguments only to a configured binary path.
 - Clean up workflow highlight keywords.
 - Build the extension on Rust edition 2024 with a size-tuned release profile.

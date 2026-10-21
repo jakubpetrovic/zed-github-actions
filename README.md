@@ -8,7 +8,8 @@ GitHub Actions workflow support for [Zed](https://zed.dev), providing intelligen
 - **Validation** — real-time diagnostics for invalid workflow syntax and schema errors
 - **Hover documentation** — inline docs for workflow keys, expression functions, and event payloads
 - **Code actions** — quickfixes like adding missing required action inputs
-- **Syntax highlighting** — workflow-specific keywords and `${{ }}` expression markers
+- **Syntax highlighting** — workflow-specific keywords and `${{ }}` expression markers, bash in step `run:` scripts, JavaScript in `actions/github-script` `script:` blocks
+- **Outline** — top-level keys, jobs and named steps in the symbol outline
 
 ## Installation
 
