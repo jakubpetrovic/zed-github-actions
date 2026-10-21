@@ -7,7 +7,7 @@
 //! `GITHUB_TOKEN` / `GH_TOKEN` environment variable or in Zed LSP settings to
 //! enable enhanced completions using live data from the GitHub API.
 
-use zed_extension_api::{self as zed, serde_json, settings::LspSettings, Result};
+use zed_extension_api::{self as zed, Result, serde_json, settings::LspSettings};
 
 const SERVER_NAME: &str = "gh-actions-language-server";
 const NPM_PACKAGE: &str = "@actions/languageserver";
