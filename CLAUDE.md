@@ -16,7 +16,7 @@ Requires Rust ≥ 1.85.0 (also set as `rust-version` in Cargo.toml).
 
 ## Checks
 
-CI runs `make check` (`cargo fmt --check` and clippy with `-D warnings`). Run it before pushing.
+CI runs `make check` (`cargo fmt --check` and clippy with `-D warnings`), `make test` and `make build`. Always run all three locally, in that order, before every push.
 
 ## Tests
 
